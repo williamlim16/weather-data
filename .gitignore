@@ -1,0 +1,4 @@
+*.tfvars
+cloud_function_src.zip
+.terraform/
+*.tfstate*
