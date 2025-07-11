@@ -57,16 +57,32 @@ def weather_to_gcs_function(request):
     Cloud Function entry point for HTTP trigger.
     Fetches weather data and saves it to a GCS bucket.
     """
+
+    request_json = request.get_json(silent=True)
+    city_name = (
+        request_json["city_name"] if request_json else os.environ.get("CITY_NAME")
+    )
+    country_code = (
+        request_json["country_code"] if request_json else os.environ.get("COUNTRY_CODE")
+    )
+    gcs_bucket_name = os.environ.get("GCS_BUCKET_NAME")
+    openweather_api_key = os.environ.get("OPENWEATHER_API_KEY")
+
     print(
-        f"Starting weather ETL for {CITY_NAME}, {COUNTRY_CODE} to GCS bucket: {GCS_BUCKET_NAME}..."
+        f"Starting weather ETL for {city_name}, {country_code} to GCS bucket: {gcs_bucket_name}..."
     )
 
-    raw_data = fetch_weather_data(CITY_NAME, COUNTRY_CODE, OPENWEATHER_API_KEY)
+    if not all([city_name, country_code, openweather_api_key, gcs_bucket_name]):
+        error_msg = "Missing required parameters. Ensure 'city_name' and 'country_code' are in the request body or environment variables, and 'OPENWEATHER_API_KEY' and 'GCS_BUCKET_NAME' are in environment variables."
+        print(error_msg)
+        return error_msg, 400
+
+    raw_data = fetch_weather_data(city_name, country_code, OPENWEATHER_API_KEY)
 
     if raw_data:
         # Create a timestamp for the filename
         timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-        file_name = f"{CITY_NAME.lower().replace(' ', '_')}_{timestamp}.json"
+        file_name = f"{city_name.lower().replace(' ', '_')}_{timestamp}.json"
 
         # Convert raw_data (dictionary) to a JSON string for saving
         json_content = json.dumps(raw_data, indent=2)
