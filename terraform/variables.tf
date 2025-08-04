@@ -16,6 +16,12 @@ variable "function_name" {
   default     = "weather-to-gcs-function"
 }
 
+variable "function_daily_name" {
+  description = "Name of the daily cloud function"
+  type        = string
+  default     = "daily_summary"
+}
+
 variable "openweather_api_key" {
   description = "Your OpenWeatherMap API key"
   type        = string

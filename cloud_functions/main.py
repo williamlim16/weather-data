@@ -1,6 +1,6 @@
-# cloud_function_src/main.py
-
+# cloud_function_src/main.py_encode_basestring
 import requests
+from json.encoder import py_encode_basestring
 import json
 import os
 from datetime import datetime, timezone
@@ -18,6 +18,74 @@ COUNTRY_CODE = os.environ.get("COUNTRY_CODE")
 
 # Initialize GCS client globally
 gcs_client = storage.Client(project=GCP_PROJECT_ID)
+
+
+@functions_framework.http
+def daily_summary(request):
+    """
+    Reformat JSON files to single NEWLINE_DELIMITED_JSON file
+    """
+
+    request_json = request.get_json(silent=True)
+    bucket_name = request_json["bucket_name"] if request_json else None
+    subdirectory = request_json.get(
+        "subdirectory"
+    )  # Get the subdirectory from the request
+    output_filename = request_json.get(
+        "output_filename", "output.jsonl"
+    )  # Default output filename
+
+    if not bucket_name:
+        print(f"Error: Missing 'bucket_name' in request.")
+        return ("Error: Missing 'bucket_name' in request.", 400)
+    prefix = ""
+    if subdirectory:
+        prefix = subdirectory
+        if not prefix.endswith("/"):
+            prefix += "/"
+        print(f"Processing files in subdirectory: {prefix}")
+    else:
+        print("Processing all files in the bucket.")
+
+    storage_client = storage.Client(project=GCP_PROJECT_ID)
+    bucket = storage_client.bucket(bucket_name)
+    blobs = bucket.list_blobs(prefix=prefix)
+
+    output_lines = []
+
+    for blob in blobs:
+        if blob.name.endswith(".json"):
+            try:
+                blob_content = blob.download_as_text()
+
+                data = json.loads(blob_content)
+
+                one_line_json = json.dumps(data)
+
+                output_lines.append(one_line_json)
+            except Exception as e:
+                print(f"Error processing file {blob.name}: {e}")
+        else:
+            print(f"Skipping non-JSON file: {blob.name}")
+
+    if not output_lines:
+        print("No JSON files found or processed in the bucket.")
+        return ("No JSON files found or processed in the bucket.", 200)
+
+    final_output_content = "\n".join(output_lines) + "\n"
+
+    try:
+        output_blob = bucket.blob(f"{prefix}{output_filename}")
+        output_blob.upload_from_string(
+            final_output_content, content_type="application/x-ndjson"
+        )
+        print(
+            f"Successfully created and uploaded {output_filename} to bucket {bucket_name}"
+        )
+        return (f"Successfully processed files and created {output_filename}", 200)
+    except Exception as e:
+        print(f"Error uploading the output file {output_filename}: {e}")
+        return (f"Error uploading the output file {output_filename}: {e}", 500)
 
 
 def fetch_weather_data(city, country_code, api_key):
