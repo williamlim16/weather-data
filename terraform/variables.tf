@@ -19,7 +19,7 @@ variable "function_name" {
 variable "function_daily_name" {
   description = "Name of the daily cloud function"
   type        = string
-  default     = "daily_summary"
+  default     = "daily-summary"
 }
 
 variable "openweather_api_key" {

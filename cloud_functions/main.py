@@ -57,8 +57,15 @@ def daily_summary(request):
         if blob.name.endswith(".json"):
             try:
                 blob_content = blob.download_as_text()
-
                 data = json.loads(blob_content)
+
+                filename_parts = blob.name.split("_")
+                if len(filename_parts) >= 3:
+                    date_str = filename_parts[1]
+                    time_str = filename_parts[2].split(".")[0]
+                    timestamp_str = date_str + time_str
+                    timestamp_obj = datetime.strptime(timestamp_str, "%Y%m%d%H%M%S")
+                    data["timestamp"] = timestamp_obj.isoformat()
 
                 one_line_json = json.dumps(data)
 

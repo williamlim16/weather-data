@@ -31,3 +31,8 @@ resource "google_project_service" "cloudscheduler_api" {
   disable_on_destroy = false
 }
 
+resource "google_project_service" "eventarc_api" {
+  project = var.gcp_project_id
+  service = "eventarc.googleapis.com"
+  disable_on_destroy = false
+}
